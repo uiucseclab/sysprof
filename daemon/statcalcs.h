@@ -6,7 +6,7 @@
 bool usegamma = false; //If we are using the gamma distribution then set this flag to true
 bool usenormal = true; //If we are using the normal distribution then set this flag to true
 bool useexponential = false; //If we are using the exponential distribution then set this flag to true
-int SAMPLE_SIZE = 10;
+int SAMPLE_SIZE = 1440;
 int BOOTSTRAP_ITERS = 1000;
 float cutoffpercent = 95.0; //Set the cutoff percentage
 

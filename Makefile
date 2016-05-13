@@ -5,6 +5,8 @@ sysprof-objs := module/sysprof.o module/data/netfilter.o module/shmem.o module/r
 
 all:
 	make -C /lib/modules/$(shell uname -r)/build M=$(PWD) modules
+	gcc -o daemon/gather -Wall -lsqlite3 daemon/gather.c
+	gcc -o daemon/statcalcs -Wall -lm -lsqlite3 daemon/statcalcs.c
 
 clean:
 	make -C /lib/modules/$(shell uname -r)/build M=$(PWD) clean
