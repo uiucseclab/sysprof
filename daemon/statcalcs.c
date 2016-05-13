@@ -353,7 +353,7 @@ float exponentialcutoff(float theta, float percent)
 	
 	float x = (((-1) * logf(1 - percent)) * theta); //the value of x will be the value at which the exponential distribution reaches the value of percent
 	
-	return x; //return our ample number cutoff value
+	return x; //return our sample number cutoff value
 }
 
 // This function determines the cutoff value for a normal distribution to determine what is considered normal and what is considered a discrepancy.
@@ -364,27 +364,27 @@ float normalcutoff(float mu, float sigma, float percent)
 	//Based on te percent given determine the correct standard normal distribution. *Note if the percent given does not match a correct percentage between 70% and 97.5% then the default percent becomes 98%.
 
 	float z = 0.0;
-	if(percent == 0.7) //if 70%
+	if(percent > 0.69 && percent < .71) //if 70%
 	{
 		z = 0.524;
 	}
-	else if(percent == 0.8) //if 80%
+	else if(percent > 0.79 && percent < .81) //if 80%
 	{
 		z = 0.842;
 	}
-	else if(percent == 0.9) //if 90%
+	else if(percent > 0.89 && percent < .91) //if 90%
 	{
 		z = 1.282;
 	}
-	else if(percent == 0.95) //if 95%
+	else if(percent > 0.94 && percent < .96) //if 95%
 	{
 		z = 1.645;
 	}
-	else if(percent == 0.975) //if 97.5%
+	else if(percent > 0.965 && percent < .985) //if 97.5%
 	{
 		z = 1.96;
 	}
-	else if(percent == 0.98) //if 98%
+	else if(percent > 0.97 && percent < .99) //if 98%
 	{
 		z = 2.054;
 	}
@@ -392,10 +392,11 @@ float normalcutoff(float mu, float sigma, float percent)
 	{
 		z = 2.054; //else make the cutoff value at 98%
 	}
-	
+	float y = sqrtf(sigma/SAMPLE_SIZE);
+	printf("sqrtf(sigma/SAMPLE_SIZE) = %f\n", y);
 	float x = (z * (sqrtf(sigma/SAMPLE_SIZE))) + mu; //Use the conversion from any normal distribution to the standard normal distribution to find the cutoff sample value
 	
-	return x; //return our ample number cutoff value
+	return x; //return our sample number cutoff value
 }
 
 //	Insert new element at end of sample
@@ -473,6 +474,8 @@ int main()
 
 
 	//	Get pac_out from database	
+	//	TODO: Change all this pacin/pacout repeat code bullshit into a function or a loop with an array
+	//				because this is NOT easily extensible to more data
 	char * sql_pacout = malloc(64);
 	sql_pacout = "SELECT PAC_OUT from NET_DATA";
 	rc = sqlite3_exec(db, sql_pacout, store_data, (void *)sample_pacout, &zErrMsg);
@@ -516,7 +519,7 @@ int main()
 
 		free(exponentialparameters);
 	}
-	else
+	else if(usenormal)
 	{
 		float *normalparameters = malloc(sizeof(float) * 2);
 		normalbootstrap(sample_pacin, frequency, normalparameters, BOOTSTRAP_ITERS, surrogatesize);
@@ -526,6 +529,11 @@ int main()
 		pacout_cutoff = normalcutoff(normalparameters[0], normalparameters[1], cutoffpercent);
 		printf("PACOUT\tmean: %f\tvariance: %f\n", normalparameters[0], normalparameters[1]);
 		free(normalparameters);
+	}
+	else
+	{
+		fprintf(stderr, "No distribution selected.");
+		exit(EXIT_FAILURE);
 	}
 
 
@@ -543,7 +551,6 @@ int main()
 	int count = 0;
 	if(opacin_cutoff[1] != 0)
 	{
-		puts("aylmao");
 		count = opacin_cutoff[1];
 		pacin_cutoff = pacin_cutoff / (count + 1.0);
 		pacin_cutoff += opacin_cutoff[0] / (count + 1.0);

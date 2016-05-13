@@ -72,14 +72,25 @@ int main(int argc, char* argv[])
 	time_t t;
 	srand((unsigned) time(&t));
 
+	int * values = malloc(sizeof(int) * 10);
+	values[0] = 5;
+values[2] = 6;
+values[3] = 4;
+values[4] = 12;
+values[5] = 3;
+values[6] = 2;
+values[7] = 1;
+values[8] = 7;
+values[9] = 7;
+values[1] = 6;
 	//	Inserts into table
-	for(int i = 0; i < 200; i++){
+	for(int i = 0; i < 10; i++){
 		char * sql2 = malloc(512);
 		snprintf(sql2, 512, "INSERT INTO NET_DATA (PAC_IN,UDP_IN,TCP_IN,ICMP_IN,OTHER_IN,PAC_OUT,UDP_OUT,TCP_OUT,ICMP_OUT,OTHER_OUT)"\
 			" VALUES (%u, %u, %u, %u, %u, %u, %u, %u, %u, %u);", 
 			pac_in, udp_in, tcp_in, icmp_in, other_in, pac_out, 
 			udp_out, tcp_out, icmp_out, other_out);
-			pac_in = rand() % 60;
+			pac_in = values[i];
 			pac_out = rand() % 100;
 		rc = sqlite3_exec(db, sql2, NULL, 0, &zErrMsg);
 		if( rc != SQLITE_OK ){

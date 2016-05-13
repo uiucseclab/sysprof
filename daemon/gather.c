@@ -130,19 +130,15 @@ int main(){
 		}
 		free(sql_cutoffs);
 
-		
-		// Check if current data is within parameters
-			// Create signal if neccessary
 
 		//	Compare sample data to cutoff
+		//	TODO: implement better signalling method
+		//				ideas: email/text msg, print to logfile, popup message
 		if(current.pac_in > cutoff_data[0])
 			puts("WARNING: Recieved more packets than normal.  There is a possibility that this is normal performance, however there is a chance this is an attack.");
 
 		if(current.pac_out > cutoff_data[5])
 			puts("WARNING: Sent more packets than normal.  There is a possibility that this is normal performance, however there is a chance this is an attack.");
-
-
-
 
 
 		printf("pack in %u\npack out %u\n", current.pac_in, current.pac_out);
