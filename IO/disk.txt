@@ -1,0 +1,5 @@
+Linux 4.5.1-1-ARCH (littlefox) 	05/08/2016 	_x86_64_	(4 CPU)
+
+Device:            tps    kB_read/s    kB_wrtn/s    kB_read    kB_wrtn
+sda               1.04         2.51        46.23     717273   13190108
+

@@ -414,7 +414,7 @@ int store_data(void *data, int argc, char **argv, char **azColName){
 //	Extract stored cutoff
 int extract_cutoff(void *data, int argc, char **argv, char **azColName){
 	((float *)data)[0] = strtol(argv[0], NULL, 10);
-	((float *)data)[0] = strtol(argv[1], NULL, 10);
+	((float *)data)[1] = strtol(argv[1], NULL, 10);
 	return 0;
 }
 
@@ -484,12 +484,24 @@ int main()
 		exit(EXIT_FAILURE);
 	}
 	free(sql_pacout);
+
+
+	//	Delete old data in database
+	char * sql_delete = malloc(32);
+	sql_pacout = "DELETE * from NET_DATA";
+	rc = sqlite3_exec(db, sql_delete, NULL, 0, &zErrMsg);
+	if( rc != SQLITE_OK ){
+		fprintf(stderr, "SQL error: %s\n", zErrMsg);
+		sqlite3_free(zErrMsg);
+		exit(EXIT_FAILURE);
+	}
+	free(sql_delete);
 	
 
 	//	Depending on flags set, evaluate a given distribution for the current data
+	//	Second, determine cutoffs
 	if(usegamma)
 	{
-		//	Create cutoffs
 		float *gammaparameters = malloc(sizeof(float) * 2);		
 		gammabootstrap(sample_pacin, frequency, gammaparameters, BOOTSTRAP_ITERS, surrogatesize);
 		pacin_cutoff = gammacutoff(gammaparameters[0], gammaparameters[1], cutoffpercent);
@@ -531,8 +543,9 @@ int main()
 		exit(EXIT_FAILURE);
 	}
 	//	Calculate new weighted average of cutoff
-	pacin_cutoff = pacin_cutoff / (opacin_cutoff[1] + 1.0);
-	pacin_cutoff += opacin_cutoff[0] / (opacin_cutoff[1] + 1.0);
+	int count = opacin_cutoff[1];
+	pacin_cutoff = pacin_cutoff / (count + 1.0);
+	pacin_cutoff += opacin_cutoff[0] / (count + 1.0);
 	printf("pacin cutoff: %f\n", pacin_cutoff);
 	free(opacin_cutoff);	
 	free(sql_pacin_cutoff);
@@ -549,11 +562,12 @@ int main()
 		exit(EXIT_FAILURE);
 	}
 	//	Calculate new weighted average of cutoff
-	pacout_cutoff = pacout_cutoff / (opacout_cutoff[1] + 1.0);
-	pacout_cutoff += opacout_cutoff[0] / (opacout_cutoff[1] + 1.0);
+	pacout_cutoff = pacout_cutoff / (count + 1.0);
+	pacout_cutoff += opacout_cutoff[0] / (count + 1.0);
 	printf("pacout cutoff: %f\n", pacout_cutoff);
 	free(opacout_cutoff);	
 	free(sql_pacout_cutoff);
+	count += 1;
 
 
 	//	Convert floats to unsigned integers
@@ -561,13 +575,13 @@ int main()
 	unsigned int upacout_cutoff = pacout_cutoff;
 
 
-	//	Store cutoffs in database
+	//	Store new cutoffs in database
 	//	Note: other data not yet collected, 0 is place holder
 	char * sql_cutoffs = malloc(512);
-	snprintf(sql_cutoffs, 512, "INSERT INTO NET_CUTOFFS (PAC_IN,UDP_IN,TCP_IN,ICMP_IN,OTHER_IN,PAC_OUT,UDP_OUT,TCP_OUT,ICMP_OUT,OTHER_OUT)"\
-		" VALUES (%u, %u, %u, %u, %u, %u, %u, %u, %u, %u);", 
-		upacin_cutoff, 0, 0, 0, 0, 
-		upacout_cutoff, 0, 0, 0, 0);
+	snprintf(sql_cutoffs, 512, "DELETE * FROM NET_CUTOFFS;" \
+		"INSERT INTO NET_CUTOFFs SPAC_IN, UDP_IN, TCP_IN, ICMP_IN, OTHER_IN, PAC_OUT, UDP_OUT, TCP_OUT, ICMP_OUT, OTHER_OUT, COUNT)"\
+		" VALUES (%u, %u, %u, %u, %u, %u, %u, %u, %u, %u, %d);", 
+		upacin_cutoff, 0, 0, 0, 0, upacout_cutoff, 0, 0, 0, 0, count);
 	rc = sqlite3_exec(db, sql_cutoffs, NULL, 0, &zErrMsg);
 	if( rc != SQLITE_OK ){
 		fprintf(stderr, "SQL error: %s\n", zErrMsg);
@@ -579,8 +593,7 @@ int main()
 	free(frequency);
 	free(sample_pacin);
 	free(sample_pacout);
-	// Convert to int
-	// Add weighted average cutoff in sqlite golden table
+
 	return 0;
 }
 

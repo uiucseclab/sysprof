@@ -9,6 +9,14 @@
 #include "../include/stats.h"
 #include "./statcalcs.h"
 
+//	Extract stored cutoffs
+int extract_cutoff(void *data, int argc, char **argv, char **azColName){
+	for(int i = 0; i < argc; i++)
+		((float *)data)[i] = strtol(argv[i], NULL, 10);
+	return 0;
+}
+
+
 int main(){
 	//	Constants
 	int PAGE_SIZE = getpagesize();
@@ -111,20 +119,19 @@ int main(){
 
 
 		//	Get cutoffs from database	
-		char * sql_pacin_cutoff = malloc(32);
-		sql_pacout = "SELECT PAC_IN from NET_CUTOFFS";
-		rc = sqlite3_exec(db, sql_pacout, callback, (void *)sample_pacout, &zErrMsg);
+		char * cutoff_data = malloc(sizeof(int) * 11);
+		char * sql_cutoffs = malloc(32);
+		sql_pacout = "SELECT * from NET_CUTOFFS";
+		rc = sqlite3_exec(db, sql_cutoffs, callback, (void *)cutoff_data, &zErrMsg);
 		if( rc != SQLITE_OK ){
 			fprintf(stderr, "SQL error: %s\n", zErrMsg);
 			sqlite3_free(zErrMsg);
 			exit(EXIT_FAILURE);
 		}
-		free(sql_pacout);
+		free(sql_cutoffs);
 
-
-		// Get out parameters from sqlite
+		
 		// Check if current data is within parameters
-			// Get cutoff from sqlite golden table
 			// Compare sample to samplecutoff
 			// Create signal if neccessary
 		printf("pack in %u\npack out %u\n", current.pac_in, current.pac_out);

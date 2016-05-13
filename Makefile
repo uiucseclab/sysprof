@@ -10,4 +10,7 @@ clean:
 	make -C /lib/modules/$(shell uname -r)/build M=$(PWD) clean
 
 gather:
-	gcc -o gather -Wall -lm daemon/gather.c
+	gcc -o gather -Wall -lsqlite3 daemon/gather.c
+
+statcalcs:
+	gcc -o statcalcs -Wall -lm -lsqlite3 daemon/statcalcs.c
