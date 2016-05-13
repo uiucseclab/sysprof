@@ -392,8 +392,6 @@ float normalcutoff(float mu, float sigma, float percent)
 	{
 		z = 2.054; //else make the cutoff value at 98%
 	}
-	float y = sqrtf(sigma/SAMPLE_SIZE);
-	printf("sqrtf(sigma/SAMPLE_SIZE) = %f\n", y);
 	float x = (z * (sqrtf(sigma/SAMPLE_SIZE))) + mu; //Use the conversion from any normal distribution to the standard normal distribution to find the cutoff sample value
 	
 	return x; //return our sample number cutoff value
