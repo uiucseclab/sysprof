@@ -393,7 +393,7 @@ float normalcutoff(float mu, float sigma, float percent)
 		z = 2.054; //else make the cutoff value at 98%
 	}
 	
-	float x = (z * (sqrtf(sigma))) + mu; //Use the conversion from any normal distribution to the standard normal distribution to find the cutoff sample value
+	float x = (z * (sqrtf(sigma/SAMPLE_SIZE))) + mu; //Use the conversion from any normal distribution to the standard normal distribution to find the cutoff sample value
 	
 	return x; //return our ample number cutoff value
 }
@@ -432,7 +432,7 @@ int main()
 	sqlite3 *db;
 	char *zErrMsg = 0;
 	int rc;
-	rc = sqlite3_open("test.db", &db);
+	rc = sqlite3_open("gather.db", &db);
 	if(rc){
   	fprintf(stderr, "Can't open database: %s\n", sqlite3_errmsg(db));
   	exit(EXIT_FAILURE);
@@ -440,7 +440,7 @@ int main()
 
 
 	//	Create parameter table if it doesn't exist
-	char * sql_create = malloc(256);
+	char * sql_create = malloc(512);
 	sql_create = "CREATE TABLE IF NOT EXISTS NET_CUTOFFS("  \
 						"PAC_IN				INT," \
 						"UDP_IN				INT," \
@@ -459,11 +459,10 @@ int main()
 		sqlite3_free(zErrMsg);
 		exit(EXIT_FAILURE);
 	}
-	free(sql_create);
 
 
 	//	Get pac_in from database	
-	char * sql_pacin = malloc(32);
+	char * sql_pacin = malloc(64);
 	sql_pacin = "SELECT PAC_IN from NET_DATA";
 	rc = sqlite3_exec(db, sql_pacin, store_data, (void *)sample_pacin, &zErrMsg);
 	if( rc != SQLITE_OK ){
@@ -471,11 +470,10 @@ int main()
 		sqlite3_free(zErrMsg);
 		exit(EXIT_FAILURE);
 	}
-	free(sql_pacin);
 
 
 	//	Get pac_out from database	
-	char * sql_pacout = malloc(32);
+	char * sql_pacout = malloc(64);
 	sql_pacout = "SELECT PAC_OUT from NET_DATA";
 	rc = sqlite3_exec(db, sql_pacout, store_data, (void *)sample_pacout, &zErrMsg);
 	if( rc != SQLITE_OK ){
@@ -483,19 +481,17 @@ int main()
 		sqlite3_free(zErrMsg);
 		exit(EXIT_FAILURE);
 	}
-	free(sql_pacout);
 
 
 	//	Delete old data in database
-	char * sql_delete = malloc(32);
-	sql_pacout = "DELETE * from NET_DATA";
+	char * sql_delete = malloc(64);
+	sql_delete = "DELETE FROM NET_DATA WHERE 1";
 	rc = sqlite3_exec(db, sql_delete, NULL, 0, &zErrMsg);
 	if( rc != SQLITE_OK ){
 		fprintf(stderr, "SQL error: %s\n", zErrMsg);
 		sqlite3_free(zErrMsg);
 		exit(EXIT_FAILURE);
 	}
-	free(sql_delete);
 	
 
 	//	Depending on flags set, evaluate a given distribution for the current data
@@ -525,16 +521,17 @@ int main()
 		float *normalparameters = malloc(sizeof(float) * 2);
 		normalbootstrap(sample_pacin, frequency, normalparameters, BOOTSTRAP_ITERS, surrogatesize);
 		pacin_cutoff = normalcutoff(normalparameters[0], normalparameters[1], cutoffpercent);
+		printf("PACIN\tmean: %f\tvariance: %f\n", normalparameters[0], normalparameters[1]);	
 		normalbootstrap(sample_pacout, frequency, normalparameters, BOOTSTRAP_ITERS, surrogatesize);
 		pacout_cutoff = normalcutoff(normalparameters[0], normalparameters[1], cutoffpercent);
-
+		printf("PACOUT\tmean: %f\tvariance: %f\n", normalparameters[0], normalparameters[1]);
 		free(normalparameters);
 	}
 
 
 	//	Get former cutoffs from database
-	int * opacin_cutoff = malloc(sizeof(int) * 2);
-	char * sql_pacin_cutoff = malloc(32);
+	int * opacin_cutoff = calloc(sizeof(int), 2);
+	char * sql_pacin_cutoff = malloc(64);
 	sql_pacin_cutoff = "SELECT PAC_IN, COUNT from NET_CUTOFFS";
 	rc = sqlite3_exec(db, sql_pacin_cutoff, extract_cutoff, (void *)opacin_cutoff, &zErrMsg);
 	if( rc != SQLITE_OK ){
@@ -543,17 +540,20 @@ int main()
 		exit(EXIT_FAILURE);
 	}
 	//	Calculate new weighted average of cutoff
-	int count = opacin_cutoff[1];
-	pacin_cutoff = pacin_cutoff / (count + 1.0);
-	pacin_cutoff += opacin_cutoff[0] / (count + 1.0);
-	printf("pacin cutoff: %f\n", pacin_cutoff);
+	int count = 0;
+	if(opacin_cutoff[1] != 0)
+	{
+		puts("aylmao");
+		count = opacin_cutoff[1];
+		pacin_cutoff = pacin_cutoff / (count + 1.0);
+		pacin_cutoff += opacin_cutoff[0] / (count + 1.0);
+	}
 	free(opacin_cutoff);	
-	free(sql_pacin_cutoff);
 
 
 	//	Get former cutoffs from database
-	int * opacout_cutoff = malloc(sizeof(int) * 2);
-	char * sql_pacout_cutoff = malloc(32);
+	int * opacout_cutoff = calloc(sizeof(int), 2);
+	char * sql_pacout_cutoff = malloc(64);
 	sql_pacout_cutoff = "SELECT PAC_OUT, COUNT from NET_CUTOFFS";
 	rc = sqlite3_exec(db, sql_pacout_cutoff, extract_cutoff, (void *)opacout_cutoff, &zErrMsg);
 	if( rc != SQLITE_OK ){
@@ -562,13 +562,16 @@ int main()
 		exit(EXIT_FAILURE);
 	}
 	//	Calculate new weighted average of cutoff
-	pacout_cutoff = pacout_cutoff / (count + 1.0);
-	pacout_cutoff += opacout_cutoff[0] / (count + 1.0);
-	printf("pacout cutoff: %f\n", pacout_cutoff);
-	free(opacout_cutoff);	
-	free(sql_pacout_cutoff);
+	if(count != 0)
+	{
+		pacout_cutoff = pacout_cutoff / (count + 1.0);
+		pacout_cutoff += opacout_cutoff[0] / (count + 1.0);
+	}
 	count += 1;
+	free(opacout_cutoff);	
 
+	printf("pacin cutoff: %f\n", pacin_cutoff);
+	printf("pacout cutoff: %f\n", pacout_cutoff);
 
 	//	Convert floats to unsigned integers
 	unsigned int upacin_cutoff = pacin_cutoff;
@@ -578,8 +581,8 @@ int main()
 	//	Store new cutoffs in database
 	//	Note: other data not yet collected, 0 is place holder
 	char * sql_cutoffs = malloc(512);
-	snprintf(sql_cutoffs, 512, "DELETE * FROM NET_CUTOFFS;" \
-		"INSERT INTO NET_CUTOFFs SPAC_IN, UDP_IN, TCP_IN, ICMP_IN, OTHER_IN, PAC_OUT, UDP_OUT, TCP_OUT, ICMP_OUT, OTHER_OUT, COUNT)"\
+	snprintf(sql_cutoffs, 512, "DELETE FROM NET_CUTOFFS WHERE 1;" \
+		"INSERT INTO NET_CUTOFFS (PAC_IN, UDP_IN, TCP_IN, ICMP_IN, OTHER_IN, PAC_OUT, UDP_OUT, TCP_OUT, ICMP_OUT, OTHER_OUT, COUNT)"\
 		" VALUES (%u, %u, %u, %u, %u, %u, %u, %u, %u, %u, %d);", 
 		upacin_cutoff, 0, 0, 0, 0, upacout_cutoff, 0, 0, 0, 0, count);
 	rc = sqlite3_exec(db, sql_cutoffs, NULL, 0, &zErrMsg);
@@ -587,7 +590,6 @@ int main()
 		fprintf(stderr, "SQL error: %s\n", zErrMsg);
 		sqlite3_free(zErrMsg);
 	}
-	free(sql_cutoffs);
 
 
 	free(frequency);

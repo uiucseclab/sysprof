@@ -93,7 +93,7 @@ int main(){
 		kill(my_pid, SIGSTOP);
 		newsample_counter = newsample_counter + 1;
 		if(newsample_counter >= SAMPLE_SIZE){
-			//create new thread for: bootstrap()
+			system("./statcalcs");
 			newsample_counter = newsample_counter % SAMPLE_SIZE;
 		}
 
@@ -121,8 +121,8 @@ int main(){
 		//	Get cutoffs from database	
 		char * cutoff_data = malloc(sizeof(int) * 11);
 		char * sql_cutoffs = malloc(32);
-		sql_pacout = "SELECT * from NET_CUTOFFS";
-		rc = sqlite3_exec(db, sql_cutoffs, callback, (void *)cutoff_data, &zErrMsg);
+		sql_cutoffs = "SELECT * from NET_CUTOFFS";
+		rc = sqlite3_exec(db, sql_cutoffs, extract_cutoff, (void *)cutoff_data, &zErrMsg);
 		if( rc != SQLITE_OK ){
 			fprintf(stderr, "SQL error: %s\n", zErrMsg);
 			sqlite3_free(zErrMsg);
@@ -132,8 +132,19 @@ int main(){
 
 		
 		// Check if current data is within parameters
-			// Compare sample to samplecutoff
 			// Create signal if neccessary
+
+		//	Compare sample data to cutoff
+		if(current.pac_in > cutoff_data[0])
+			puts("WARNING: Recieved more packets than normal.  There is a possibility that this is normal performance, however there is a chance this is an attack.");
+
+		if(current.pac_out > cutoff_data[5])
+			puts("WARNING: Sent more packets than normal.  There is a possibility that this is normal performance, however there is a chance this is an attack.");
+
+
+
+
+
 		printf("pack in %u\npack out %u\n", current.pac_in, current.pac_out);
 	}
 

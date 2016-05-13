@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <sqlite3.h>
 #include <stdlib.h>
-
+#include <time.h>
 
 int callback(void *data, int argc, char **argv, char **azColName){
 	for(int i = 0; i < 1440; i++)
@@ -26,7 +26,7 @@ int main(int argc, char* argv[])
 	char * sql = malloc(2048);
 	if (!sql) { perror("malloc"); exit(EXIT_FAILURE); };
 
-	rc = sqlite3_open("test.db", &db);
+	rc = sqlite3_open("gather.db", &db);
 
 	if( rc ){
 		fprintf(stderr, "Can't open database: %s\n", sqlite3_errmsg(db));
@@ -69,14 +69,18 @@ int main(int argc, char* argv[])
   unsigned int icmp_out = 18;
   unsigned int other_out = 19;
 
+	time_t t;
+	srand((unsigned) time(&t));
+
 	//	Inserts into table
-	for(int i = 0; i < 1440; i++){
-		char * sql2 = malloc(2048);
-		snprintf(sql2, 2048, "INSERT INTO NET_DATA (PAC_IN,UDP_IN,TCP_IN,ICMP_IN,OTHER_IN,PAC_OUT,UDP_OUT,TCP_OUT,ICMP_OUT,OTHER_OUT)"\
+	for(int i = 0; i < 200; i++){
+		char * sql2 = malloc(512);
+		snprintf(sql2, 512, "INSERT INTO NET_DATA (PAC_IN,UDP_IN,TCP_IN,ICMP_IN,OTHER_IN,PAC_OUT,UDP_OUT,TCP_OUT,ICMP_OUT,OTHER_OUT)"\
 			" VALUES (%u, %u, %u, %u, %u, %u, %u, %u, %u, %u);", 
 			pac_in, udp_in, tcp_in, icmp_in, other_in, pac_out, 
 			udp_out, tcp_out, icmp_out, other_out);
-
+			pac_in = rand() % 60;
+			pac_out = rand() % 100;
 		rc = sqlite3_exec(db, sql2, NULL, 0, &zErrMsg);
 		if( rc != SQLITE_OK ){
 			fprintf(stderr, "SQL error: %s\n", zErrMsg);
