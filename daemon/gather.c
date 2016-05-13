@@ -134,7 +134,7 @@ int main(){
 		//	Compare sample data to cutoff
 		//	TODO: implement better signalling method
 		//				ideas: email/text msg, print to logfile, popup message
-		if(cutoff_data[q] != 0)
+		if(cutoff_data[0] != 0)
 		{
 			if(current.pac_in > cutoff_data[0])
 				puts("WARNING: Recieved more packets than normal.  There is a possibility that this is normal performance, however there is a chance this is an attack.");
